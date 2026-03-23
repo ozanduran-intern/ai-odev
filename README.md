@@ -1,4 +1,5 @@
-# AI Ödev / AI 과제
+#AI 과제
+0.공통 과제
 
 AI-related assignments and projects.
 
