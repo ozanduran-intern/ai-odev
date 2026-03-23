@@ -23,7 +23,7 @@ ai-odev/
 
 ## Projects / 프로젝트
 
-### ortak-gorev — Korean Learning Chatbot / 한국어 학습 챗봇
+## 공통 괴제 — Korean Learning Chatbot / 한국어 학습 챗봇
 
 A multilingual Korean language learning chatbot with:
 
