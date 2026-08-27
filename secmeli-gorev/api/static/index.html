@@ -1010,14 +1010,78 @@
     search_travel_docs: 'travel docs'
   };
 
-  const SUGGESTIONS = [
-    { label: '\ud83c\uddef\ud83c\uddf5 Japan itinerary',  prompt: "Plan a 2-week trip to Japan" },
-    { label: '\ud83d\udcb8 Budget travel',    prompt: "Best budget destinations in Southeast Asia?" },
-    { label: '\ud83c\udf5c Food guide',       prompt: "Best food cities in the world?" },
-    { label: '\ud83d\udcb1 Currency',          prompt: "100 USD to EUR" },
-    { label: '\u2600\ufe0f Weather',           prompt: "What's the weather in Paris?" },
-    { label: '\ud83c\udf0d Translate',         prompt: "How do you say thank you in Japanese?" },
-  ];
+  /* ── Suggestion Pool (5 categories, randomized per session) ── */
+  const SUGGESTION_POOL = {
+    route: [
+      { label: '\ud83c\uddef\ud83c\uddf5 Japan itinerary', prompt: "Plan a 2-week trip to Japan" },
+      { label: '\ud83c\uddee\ud83c\uddf8 Iceland adventure', prompt: "Plan a trip to Iceland — glaciers, hot springs, northern lights" },
+      { label: '\ud83c\uddf2\ud83c\udde6 Morocco road trip', prompt: "Plan a road trip through Morocco" },
+      { label: '\ud83c\uddf3\ud83c\uddff New Zealand trek', prompt: "Best hiking routes in New Zealand" },
+      { label: '\ud83c\uddec\ud83c\uddf7 Greek islands', prompt: "Island hopping guide for Greece" },
+      { label: '\ud83c\uddfb\ud83c\uddf3 Vietnam north to south', prompt: "Plan a 3-week Vietnam trip from Hanoi to Ho Chi Minh" },
+    ],
+    style: [
+      { label: '\ud83d\udc8d Honeymoon', prompt: "Best luxury honeymoon destinations" },
+      { label: '\ud83c\udf92 Backpacking', prompt: "Best backpacking routes for budget travelers" },
+      { label: '\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67 Family trip', prompt: "Best family-friendly destinations with kids" },
+      { label: '\ud83e\uddd8 Solo retreat', prompt: "Best solo travel destinations for relaxation" },
+      { label: '\u26fa Digital nomad', prompt: "Best cities for digital nomads — wifi, cafes, cost of living" },
+    ],
+    purpose: [
+      { label: '\ud83c\udf5c Food cities', prompt: "Best food cities in the world" },
+      { label: '\ud83c\udfdb\ufe0f History & culture', prompt: "Top 5 cities for history and culture lovers" },
+      { label: '\ud83c\udfd4\ufe0f Nature escapes', prompt: "Most stunning natural landscapes to visit" },
+      { label: '\ud83c\udfb6 Music & nightlife', prompt: "Best cities for live music and nightlife" },
+      { label: '\ud83c\udfca\u200d\u2642\ufe0f Adventure sports', prompt: "Best destinations for adventure sports — diving, surfing, climbing" },
+    ],
+    practical: [
+      { label: '\ud83d\udcb1 Currency rates', prompt: "100 USD to EUR" },
+      { label: '\u2600\ufe0f Weather check', prompt: "What's the weather in Tokyo?" },
+      { label: '\ud83c\udf0d Translate', prompt: "How do you say thank you in Japanese?" },
+      { label: '\ud83d\udcb8 Budget planner', prompt: "How much does a week in Thailand cost?" },
+      { label: '\ud83e\uddf3 Packing list', prompt: "What should I pack for a winter trip to Seoul?" },
+    ],
+    trending: [
+      { label: '\ud83c\udf38 Cherry blossom', prompt: "Best cherry blossom spots in Japan and Korea" },
+      { label: '\ud83c\udf1f Hidden gems 2026', prompt: "Underrated travel destinations for 2026" },
+      { label: '\ud83c\udfc6 Festival season', prompt: "Upcoming festivals worth traveling for" },
+      { label: '\u2744\ufe0f Winter getaway', prompt: "Best warm destinations for a winter escape" },
+      { label: '\ud83c\udf05 Sunset spots', prompt: "Most beautiful sunset viewing spots in the world" },
+    ],
+  };
+
+  const CATEGORIES = Object.keys(SUGGESTION_POOL);
+
+  function pickSuggestions() {
+    const prevKeys = JSON.parse(localStorage.getItem('beroam_prev_suggestions') || '[]');
+
+    // Her kategoriden 1 tane seç, toplam 5 (en az 4 farklı kategori)
+    const shuffledCats = [...CATEGORIES].sort(() => Math.random() - 0.5);
+    const picked = [];
+
+    for (const cat of shuffledCats) {
+      const pool = SUGGESTION_POOL[cat];
+      // Önceki oturumda kullanılanları filtrele
+      const available = pool.filter(s => !prevKeys.includes(s.prompt));
+      const source = available.length > 0 ? available : pool;
+      const item = source[Math.floor(Math.random() * source.length)];
+      picked.push(item);
+    }
+
+    // Bir tane daha ekle (rastgele kategoriden)
+    const bonusCat = CATEGORIES[Math.floor(Math.random() * CATEGORIES.length)];
+    const bonusPool = SUGGESTION_POOL[bonusCat].filter(s => !picked.some(p => p.prompt === s.prompt));
+    if (bonusPool.length > 0) {
+      picked.push(bonusPool[Math.floor(Math.random() * bonusPool.length)]);
+    }
+
+    // Hafızaya kaydet (sonraki oturum için)
+    localStorage.setItem('beroam_prev_suggestions', JSON.stringify(picked.map(s => s.prompt)));
+
+    return picked;
+  }
+
+  let currentSuggestions = pickSuggestions();
 
   /* ── State ── */
   let busy = false;
@@ -1046,6 +1110,7 @@
 
   window.resetSession = () => {
     sessionId = genId();
+    currentSuggestions = pickSuggestions();
     msgArea.innerHTML = '<div id="empty-state"></div>';
     renderEmpty();
     inputEl.focus();
@@ -1055,7 +1120,7 @@
   function renderEmpty() {
     const el = document.getElementById('empty-state');
     if (!el) return;
-    const chips = SUGGESTIONS.map(s =>
+    const chips = currentSuggestions.map(s =>
       `<button class="empty-chip" data-prompt="${escapeAttr(s.prompt)}">${s.label}</button>`
     ).join('');
     el.outerHTML = `<div class="empty-state">
